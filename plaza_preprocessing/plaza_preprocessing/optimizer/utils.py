@@ -13,13 +13,33 @@ def unpack_geometry_coordinates(geometry):
         for geom in geometry:
             coords = coords.union(unpack_geometry_coordinates(geom))
         return coords
-    elif geom_type == MultiLineString or geom_type == MultiPoint:
+    elif geom_type == MultiLineString:
+        return set().union([c for element in geometry for c in redistribute_vertices(element, meters_to_degrees(10)).coords])
+    elif geom_type == MultiPoint:
         return set().union([c for element in geometry for c in element.coords])
-    elif geom_type == LineString or geom_type == Point:
+    elif geom_type == Point:
         return set(geometry.coords)
+    elif geom_type == LineString:
+        return set(redistribute_vertices(geometry, meters_to_degrees(10)).coords)
+        # return set(geometry.coords)
     else:
         raise ValueError(f"Unsupported Geometry type {geom_type}")
 
+
+def redistribute_vertices(geom, distance):
+    if geom.geom_type == 'LineString':
+        num_vert = int(round(geom.length / distance))
+        if num_vert == 0:
+            num_vert = 1
+        return LineString(
+            [geom.interpolate(float(n) / num_vert, normalized=True)
+             for n in range(num_vert + 1)])
+    elif geom.geom_type == 'MultiLineString':
+        parts = [redistribute_vertices(part, distance)
+                 for part in geom]
+        return type(geom)([p for p in parts if not p.is_empty])
+    else:
+        raise ValueError('unhandled geometry %s', (geom.geom_type,))
 
 def meters_to_degrees(meters):
     """ convert meters to approximate degrees """

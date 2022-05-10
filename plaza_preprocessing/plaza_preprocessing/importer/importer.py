@@ -8,7 +8,7 @@ from plaza_preprocessing import configuration
 logger = logging.getLogger('plaza_preprocessing.importer')
 WKBFAB = osmium.geom.WKBFactory()
 
-OSM_MAX_ID = 10**10 
+OSM_MAX_ID = 10**10
 
 
 def import_osm(filename, tag_filters):
@@ -102,8 +102,7 @@ class _PlazaHandler(osmium.SimpleHandler):
             configuration.filter_tags(node.tags, self.tag_filters['point_obstacle'])
 
     def _is_relevant_way(self, way):
-        return not way.is_closed() and \
-            "highway" in way.tags or \
+        return "highway" in way.tags or \
             way.tags.get("railway") == "tram" or \
             configuration.filter_tags(way.tags, self.tag_filters['barrier'])
 

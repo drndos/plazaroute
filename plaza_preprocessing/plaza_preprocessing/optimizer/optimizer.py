@@ -68,9 +68,7 @@ class PlazaPreprocessor:
             logger.debug(f"Discarding Plaza {plaza['osm_id']}: completely obstructed by obstacles")
             return None
 
-        entry_points = self._calc_entry_points(
-            plaza_geom_without_obstacles, intersecting_lines,
-            lookup_buffer_m=self.config['entry-point-lookup-buffer'])
+        entry_points = self._calc_entry_points(plaza_geom_without_obstacles, intersecting_lines, lookup_buffer_m=self.config['entry-point-lookup-buffer'])
 
         if len(entry_points) < 2:
             logger.debug(f"Discarding Plaza {plaza['osm_id']} - it has fewer than 2 entry points")
@@ -94,13 +92,14 @@ class PlazaPreprocessor:
     def _get_graph_edges(self, entry_points: List[Point], plaza_geom: Polygon,
                          plaza_geom_without_obstacles: Polygon) -> List[LineString]:
         """ create graph with shortest paths between entry points """
+
+        """
+         .*\(([^ ]+) ([^)]+)\)
+         L.marker([$2, $1]).addTo(map);
+        """
         graph_edges = self.graph_processor.create_graph_edges(plaza_geom_without_obstacles, entry_points)
 
-        graph = shortest_paths.create_graph(graph_edges)
-        shortest_path_lines = self.shortest_path_strategy(graph, entry_points)
-        optimized_lines = self.graph_processor.optimize_lines(
-            plaza_geom, shortest_path_lines, self.config['obstacle-buffer'])
-        return optimized_lines
+        return graph_edges
 
     def _calc_entry_points(self, plaza_geometry, intersecting_lines, lookup_buffer_m):
         """
@@ -110,21 +109,12 @@ class PlazaPreprocessor:
         for line in intersecting_lines:
             line_geom = line['geometry']
             intersection = line_geom.intersection(plaza_geometry)
-            intersection_coords = intersection_coords.union(
-                utils.unpack_geometry_coordinates(intersection))
+            line_intersection_coords = utils.unpack_geometry_coordinates(intersection)
+            intersection_coords = intersection_coords.union(line_intersection_coords)
 
         intersection_points = list(map(Point, intersection_coords))
 
-        # define a buffer around the outer ring and check if the points are inside this buffer
-        buffer_distance = utils.meters_to_degrees(lookup_buffer_m)
-
-        plaza_outer_buffer = plaza_geometry.exterior.buffer(
-            buffer_distance, cap_style=CAP_STYLE.flat, join_style=JOIN_STYLE.mitre)
-
-        entry_points = [
-            p for p in intersection_points if plaza_outer_buffer.contains(p)]
-
-        return entry_points
+        return intersection_points
 
     def _map_entry_lines(self, intersecting_lines, entry_points):
         """ map entry lines to entry points """
