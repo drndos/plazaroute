@@ -1,13 +1,17 @@
+import itertools
 import logging
 from typing import List
+
 import rtree
+from shapely.geometry import CAP_STYLE
 from shapely.geometry import Point, MultiPolygon, Polygon, LineString, box
-from plaza_preprocessing.optimizer import utils
-from plaza_preprocessing.optimizer import shortest_paths
-from plaza_preprocessing.optimizer.graphprocessor.graphprocessor import GraphProcessor
-from plaza_preprocessing.importer.osmholder import OSMHolder
+from shapely.ops import unary_union
+
 from plaza_preprocessing import configuration
-from shapely.geometry import CAP_STYLE, JOIN_STYLE
+from plaza_preprocessing.importer.osmholder import OSMHolder
+from plaza_preprocessing.optimizer import utils
+from plaza_preprocessing.optimizer.graphprocessor.graphprocessor import \
+    GraphProcessor
 
 logger = logging.getLogger('plaza_preprocessing.optimizer')
 
@@ -34,19 +38,65 @@ class PlazaPreprocessor:
         self.graph_processor = graph_processor
         self.shortest_path_strategy = shortest_path_strategy
         self.config = config
+        self.no_plaza_intersections = {}
 
         self._create_spatial_indices()
 
     def process_plazas(self):
         """ process all plazas in the osm holder"""
         processed_plazas = []
-        for plaza in self.plazas:
+        merged_plazas = self._merge_plazas(self.plazas)
+        for key, plaza in merged_plazas.items():
             logger.info(f"Processing plaza {plaza['osm_id']}")
             processed_plaza = self._process_plaza(plaza)
             if processed_plaza is not None:
                 processed_plazas.append(processed_plaza)
 
         return processed_plazas
+
+    def _merge_plazas(self, plazas):
+        merged_plazas = {}
+        intersecting_plazas = {}
+        osm_id = 0
+
+        for plaza in plazas:
+            merged_plazas[plaza['osm_id']] = plaza
+
+        for plaza in plazas:
+            intersecting_plazas[plaza['osm_id']] = plaza
+
+        while True:
+            intersections = self._find_intersections(intersecting_plazas)
+            intersecting_plazas = {}
+            if len(intersections) > 0:
+                for intersection in intersections:
+                    if intersection['left']['osm_id'] in merged_plazas or intersection['right']['osm_id'] in merged_plazas:
+                        osm_id = osm_id + 1
+                        logger.info(f"Merging plazas {intersection['left']['osm_id']} and {intersection['right']['osm_id']} into {osm_id}"),
+                        to_merge = [intersection['left']['geometry'], intersection['right']['geometry']]
+                        merged_plaza_geometry = unary_union(to_merge)
+                        merged_plaza = {
+                            'osm_id': osm_id,
+                            'geometry': merged_plaza_geometry
+                        }
+                        merged_plazas.pop(intersection['left']['osm_id'], None)
+                        merged_plazas.pop(intersection['right']['osm_id'], None)
+                        merged_plazas[osm_id] = merged_plaza
+                        intersecting_plazas[osm_id] = merged_plaza
+            else:
+                break
+
+        return merged_plazas
+
+    def _find_intersections(self, plazas: dict):
+        intersections = []
+        combinations = list(itertools.combinations(list(plazas.values()), 2))
+        for comb in combinations:
+            logger.debug(f"Looking for intersection {comb[0]} and {comb[1]}")
+            if comb[0]['geometry'].intersects(comb[1]['geometry']):
+                intersections.append({'left': comb[0], 'right': comb[1]})
+
+        return intersections
 
     def _create_spatial_indices(self):
         """ create spatial indices for lines, buildings and points"""
