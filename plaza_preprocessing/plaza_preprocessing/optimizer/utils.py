@@ -5,23 +5,22 @@ from shapely.geometry import Point, MultiPoint, LineString, MultiLineString, Geo
 logger = logging.getLogger('plaza_preprocessing.optimizer')
 
 
-def unpack_geometry_coordinates(geometry):
+def unpack_geometry_coordinates(geometry, interpolate_meters):
     """ return a set with every point in LineString and Point geometries """
     geom_type = type(geometry)
     if geom_type == GeometryCollection:
         coords = set()
         for geom in geometry:
-            coords = coords.union(unpack_geometry_coordinates(geom))
+            coords = coords.union(unpack_geometry_coordinates(geom, interpolate_meters))
         return coords
     elif geom_type == MultiLineString:
-        return set().union([c for element in geometry for c in redistribute_vertices(element, meters_to_degrees(10)).coords])
+        return set().union([c for element in geometry for c in redistribute_vertices(element, meters_to_degrees(interpolate_meters)).coords])
     elif geom_type == MultiPoint:
         return set().union([c for element in geometry for c in element.coords])
     elif geom_type == Point:
         return set(geometry.coords)
     elif geom_type == LineString:
-        return set(redistribute_vertices(geometry, meters_to_degrees(10)).coords)
-        # return set(geometry.coords)
+        return set(redistribute_vertices(geometry, meters_to_degrees(interpolate_meters)).coords)
     else:
         raise ValueError(f"Unsupported Geometry type {geom_type}")
 

@@ -51,6 +51,7 @@ footway-tags: # tags that will be used for the newly generated ways
 graph-strategy: visibility # one of visibility, spiderweb
 spiderweb-grid-size: 2 # grid size in meters, if spiderweb is used
 obstacle-buffer: 2 # minimal distance from any obstacles in meters
+interpolate-entry-points: 10 # distance in meters between entrypoints in intersecting lines
 
 shortest-path-algorithm: astar # one of astar, dijkstra
 
@@ -92,6 +93,9 @@ SCHEMA = {
            'enum': ['visibility', 'spiderweb']
        },
        'spiderweb-grid-size': {
+           'type': 'number'
+       },
+       'interpolate-entry-points': {
            'type': 'number'
        },
        'obstacle-buffer': {

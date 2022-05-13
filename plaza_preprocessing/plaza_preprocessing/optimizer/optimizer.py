@@ -118,7 +118,7 @@ class PlazaPreprocessor:
             logger.debug(f"Discarding Plaza {plaza['osm_id']}: completely obstructed by obstacles")
             return None
 
-        entry_points = self._calc_entry_points(plaza_geom_without_obstacles, intersecting_lines, lookup_buffer_m=self.config['entry-point-lookup-buffer'])
+        entry_points = self._calc_entry_points(plaza_geom_without_obstacles, intersecting_lines, lookup_buffer_m=self.config['entry-point-lookup-buffer'], interpolate_meters=self.config['interpolate-entry-points'])
 
         if len(entry_points) < 2:
             logger.debug(f"Discarding Plaza {plaza['osm_id']} - it has fewer than 2 entry points")
@@ -151,7 +151,7 @@ class PlazaPreprocessor:
 
         return graph_edges
 
-    def _calc_entry_points(self, plaza_geometry, intersecting_lines, lookup_buffer_m):
+    def _calc_entry_points(self, plaza_geometry, intersecting_lines, lookup_buffer_m, interpolate_meters):
         """
         calculate points where lines intersect with the outer ring of the plaza
         """
@@ -159,7 +159,7 @@ class PlazaPreprocessor:
         for line in intersecting_lines:
             line_geom = line['geometry']
             intersection = line_geom.intersection(plaza_geometry)
-            line_intersection_coords = utils.unpack_geometry_coordinates(intersection)
+            line_intersection_coords = utils.unpack_geometry_coordinates(intersection, interpolate_meters)
             intersection_coords = intersection_coords.union(line_intersection_coords)
 
         intersection_points = list(map(Point, intersection_coords))
