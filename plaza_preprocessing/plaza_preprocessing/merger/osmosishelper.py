@@ -12,7 +12,7 @@ logger = logging.getLogger('plaza_preprocessing.osmosishelper')
 
 def merge_osm_files(out_file, *filenames):
     logger.debug(f"Merging {filenames} to {out_file}")
-    cmd = ['osmosis']
+    cmd = ['osmosis.bat']
     for filename in filenames:
         extension = splitext(filename)[1]
         if extension == '.osm':
