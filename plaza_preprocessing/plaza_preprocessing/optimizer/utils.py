@@ -17,7 +17,7 @@ def unpack_geometry_coordinates(geometry, interpolate_meters):
         print(geometry)
         return set().union([c for element in geometry.geoms for c in redistribute_vertices(element, meters_to_degrees(interpolate_meters)).coords])
     elif geom_type == MultiPoint:
-        return set().union([c for element in geometry for c in element.coords])
+        return set().union([c for element in geometry.geoms for c in element.coords])
     elif geom_type == Point:
         return set(geometry.coords)
     elif geom_type == LineString:
