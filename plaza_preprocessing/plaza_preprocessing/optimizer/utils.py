@@ -10,7 +10,7 @@ def unpack_geometry_coordinates(geometry, interpolate_meters):
     geom_type = type(geometry)
     if geom_type == GeometryCollection:
         coords = set()
-        for geom in geometry:
+        for geom in geometry.geoms:
             coords = coords.union(unpack_geometry_coordinates(geom, interpolate_meters))
         return coords
     elif geom_type == MultiLineString:
